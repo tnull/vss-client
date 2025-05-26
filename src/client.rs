@@ -31,7 +31,7 @@ where
 impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 	/// Constructs a [`VssClient`] using `base_url` as the VSS server endpoint.
 	pub fn new(base_url: String, retry_policy: R) -> Self {
-		let client = Client::new();
+		let client = Client::builder().timeout(std::time::Duration::from_secs(10)).build().unwrap();
 		Self::from_client(base_url, client, retry_policy)
 	}
 
@@ -51,7 +51,7 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 	pub fn new_with_headers(
 		base_url: String, retry_policy: R, header_provider: Arc<dyn VssHeaderProvider>,
 	) -> Self {
-		let client = Client::new();
+		let client = Client::builder().timeout(std::time::Duration::from_secs(10)).build().unwrap();
 		Self { base_url, client, retry_policy, header_provider }
 	}
 

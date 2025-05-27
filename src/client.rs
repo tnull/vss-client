@@ -91,14 +91,21 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 	pub async fn put_object(
 		&self, request: &PutObjectRequest,
 	) -> Result<PutObjectResponse, VssError> {
-		retry(
+        let keys: Vec<String> = request.transaction_items.iter().map(|i| &i.key).cloned().collect();
+		println!("PUT OBJ: {:?}", keys);
+		let res = retry(
 			|| async {
 				let url = format!("{}/putObjects", self.base_url);
-				self.post_request(request, &url).await
+				println!("POST");
+				let res_inner = self.post_request(request, &url).await;
+				println!("POST DONE");
+				res_inner
 			},
 			&self.retry_policy,
 		)
-		.await
+		.await;
+		println!("PUT OBJ DONE: {:?}", request.transaction_items.iter().map(|i| &i.key));
+		res
 	}
 
 	/// Deletes the given `key` and `value` in `request`.

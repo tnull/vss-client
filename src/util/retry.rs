@@ -63,6 +63,7 @@ where
 		match operation().await {
 			Ok(result) => return Ok(result),
 			Err(err) => {
+				println!("RETRYING DUE TO ERR: {:?}", err);
 				attempts_made += 1;
 				if let Some(delay) = retry_policy.next_delay(&RetryContext {
 					attempts_made,
@@ -72,6 +73,7 @@ where
 					tokio::time::sleep(delay).await;
 					accumulated_delay += delay;
 				} else {
+					println!("GIVING UP");
 					return Err(err);
 				}
 			},

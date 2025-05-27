@@ -35,6 +35,7 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 		let client = Client::builder()
 			.timeout(DEFAULT_TIMEOUT)
 			.connect_timeout(DEFAULT_TIMEOUT)
+			.read_timeout(DEFAULT_TIMEOUT)
 			.build()
 			.unwrap();
 		Self::from_client(base_url, client, retry_policy)
@@ -59,6 +60,7 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 		let client = Client::builder()
 			.timeout(DEFAULT_TIMEOUT)
 			.connect_timeout(DEFAULT_TIMEOUT)
+			.read_timeout(DEFAULT_TIMEOUT)
 			.build()
 			.unwrap();
 		Self { base_url, client, retry_policy, header_provider }

@@ -87,15 +87,17 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 		let res = retry(
 			|| async {
 				let url = format!("{}/getObject", self.base_url);
-				self.post_request(request, &url).await.and_then(|response: GetObjectResponse| {
-					if response.value.is_none() {
-						Err(VssError::InternalServerError(
+				self.post_request(request, &url, true).await.and_then(
+					|response: GetObjectResponse| {
+						if response.value.is_none() {
+							Err(VssError::InternalServerError(
 							"VSS Server API Violation, expected value in GetObjectResponse but found none".to_string(),
 						))
-					} else {
-						Ok(response)
-					}
-				})
+						} else {
+							Ok(response)
+						}
+					},
+				)
 			},
 			&self.retry_policy,
 		)
@@ -123,7 +125,7 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 		let res = retry(
 			|| async {
 				let url = format!("{}/putObjects", self.base_url);
-				self.post_request(request, &url).await
+				self.post_request(request, &url, false).await
 			},
 			&self.retry_policy,
 		)
@@ -149,7 +151,7 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 		let res = retry(
 			|| async {
 				let url = format!("{}/deleteObject", self.base_url);
-				self.post_request(request, &url).await
+				self.post_request(request, &url, false).await
 			},
 			&self.retry_policy,
 		)
@@ -177,7 +179,7 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 		let res = retry(
 			|| async {
 				let url = format!("{}/listKeyVersions", self.base_url);
-				self.post_request(request, &url).await
+				self.post_request(request, &url, true).await
 			},
 			&self.retry_policy,
 		)
@@ -189,7 +191,7 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 	}
 
 	async fn post_request<Rq: Message, Rs: Message + Default>(
-		&self, request: &Rq, url: &str,
+		&self, request: &Rq, url: &str, enable_pipelining: bool,
 	) -> Result<Rs, VssError> {
 		let request_body = request.encode_to_vec();
 		let headers = self
@@ -198,13 +200,16 @@ impl<R: RetryPolicy<E = VssError>> VssClient<R> {
 			.await
 			.map_err(|e| VssError::AuthError(e.to_string()))?;
 
-		let http_request = bitreq::post(url)
+		let mut http_request = bitreq::post(url)
 			.with_header(CONTENT_TYPE, APPLICATION_OCTET_STREAM)
 			.with_headers(headers)
 			.with_body(request_body)
 			.with_timeout(DEFAULT_TIMEOUT_SECS)
-			.with_max_body_size(Some(MAX_RESPONSE_BODY_SIZE))
-			.with_pipelining();
+			.with_max_body_size(Some(MAX_RESPONSE_BODY_SIZE));
+
+		if enable_pipelining {
+			http_request = http_request.with_pipelining();
+		}
 
 		let response = self.client.send_async(http_request).await?;
 
